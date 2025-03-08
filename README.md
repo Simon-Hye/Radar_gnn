@@ -2,7 +2,6 @@
 
 ![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![PyTorch Version](https://img.shields.io/badge/PyTorch-1.10%2B-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
 
 本项目是基于图神经网络（GNN）的雷达信号分类系统，能够处理多雷达协同采集的时频图数据，实现高效的多标签动作分类。系统通过时空特征提取和图结构建模，有效捕捉雷达网络的空间关系与时序特征。
 

@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from cnn import CNNFeatureExtractor
-from gat import RadarGATAggregator
-from classifier import RadarClassifier
-from graph_builder import StaticGraphBuilder
+from .cnn import CNNFeatureExtractor
+from .gat import RadarGATAggregator
+from .classifier import RadarClassifier
+from .graph_builder import StaticGraphBuilder
 
 class SingleWindowRadarGNN(nn.Module):
     def __init__(self, 

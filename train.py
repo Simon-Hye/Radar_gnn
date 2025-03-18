@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 
 from model.radar_gnn import SingleWindowRadarGNN
-from loading_data import RadarDataModule
+from dataloader import RadarDataModule
 
 
 def train_model(

@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
-from torch.utils.data import DataLoader
-
+from torch.utils.data import DataLoader,Subset
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter(log_dir="runs/experiment1")
 
 from model.radar_gnn import SingleWindowRadarGNN
-from dataloader import RadarDataModule
+from build_dataset import RadarDataset
 
 
 def train_model(
@@ -16,7 +17,8 @@ def train_model(
     num_epochs: int = 50,
     lr: float = 1e-3,
     device: str = "cuda",
-    save_path: str = "best_model.pth"
+    save_path: str = "best_model.pth",
+    log_dir: str = "runs/experiment"
 ):
     """多标签分类模型训练验证流程
     
@@ -28,6 +30,7 @@ def train_model(
         lr: 初始学习率
         device: 训练设备
         save_path: 最佳模型保存路径
+        log_dir: Tensorboard 日志目录
     Returns:
         Tuple: (训练损失记录, 验证指标记录, 最佳模型)
     """
@@ -41,52 +44,59 @@ def train_model(
     train_loss_history = []
     val_metrics_history = []
 
+    writer = SummaryWriter(log_dir=log_dir)
+
+    global_step = 0
+
     for epoch in range(num_epochs):
         # ================= 训练阶段 =================
         model.train()
         epoch_train_loss = []
         
         for batch in train_loader:
-            # 数据加载 (假设数据加载器返回 (inputs, targets))
             inputs, targets = batch
-            inputs = inputs.to(device)  # [B,5,T,F]
-            targets = targets.float().to(device)  # [B,10]
-            
-            # 前向传播
-            outputs = model(inputs)  # [B,10]
+            inputs = inputs.to(device)      # [B, 5, T, F]
+            targets = targets.float().to(device)  # [B, num_classes]
+
+            outputs = model(inputs)  # [B, num_classes]
             loss = criterion(outputs, targets)
-            
-            # 反向传播
+
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)  # 梯度裁剪
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
-            
+
             epoch_train_loss.append(loss.item())
+            writer.add_scalar("Loss/Train_Batch", loss.item(), global_step)
+            global_step += 1
         
         # 记录平均训练损失
         avg_train_loss = np.mean(epoch_train_loss)
         train_loss_history.append(avg_train_loss)
-        
+        writer.add_scalar("Loss/Train_Epoch", avg_train_loss, epoch)
+
         # ================= 验证阶段 =================
         val_metrics = evaluate_model(model, val_loader, device)
         val_metrics_history.append(val_metrics)
+        writer.add_scalar("Loss/Val", val_metrics['loss'], epoch)
+        writer.add_scalar("Metrics/F1", val_metrics['f1'], epoch)
+        writer.add_scalar("Metrics/AUC", val_metrics['auc'], epoch)
+        writer.add_scalar("Metrics/Accuracy", val_metrics['accuracy'], epoch)
+        writer.add_scalar("LearningRate", optimizer.param_groups[0]['lr'], epoch)
         
         # 学习率调度
         scheduler.step(val_metrics['loss'])
         
-        # 保存最佳模型
         if val_metrics['loss'] < best_val_loss:
             best_val_loss = val_metrics['loss']
             torch.save(model.state_dict(), save_path)
-            print(f"Epoch {epoch+1}: 保存最佳模型 (val_loss={best_val_loss:.4f})")
+            print(f"Epoch {epoch+1}: save the best model (val_loss={best_val_loss:.4f})")
         
-        # 打印日志
-        print(f"Epoch {epoch+1}/{num_epochs} | "
-              f"Train Loss: {avg_train_loss:.4f} | "
-              f"Val Loss: {val_metrics['loss']:.4f} | "
-              f"F1: {val_metrics['f1']:.4f} | "
-              f"AUC: {val_metrics['auc']:.4f}")
+        print(f"Epoch {epoch+1}/{num_epochs} | Train Loss: {avg_train_loss:.4f} | "
+              f"Val Loss: {val_metrics['loss']:.4f} | F1: {val_metrics['f1']:.4f} | "
+              f"AUC: {val_metrics['auc']:.4f} | Accuracy: {val_metrics['accuracy']:.4f}")
+    
+    writer.close()
     
     return train_loss_history, val_metrics_history, model
 
@@ -142,30 +152,29 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
 
 
 if __name__ == "__main__":
-    # 生成随机数据
-    N = 1000
-    C = 5
-    T = 30
-    F = 128
-    num_classes = 10
-    train_data = np.random.randn(N ,C, T, F)
-    train_labels = np.random.randint(0, 2, size=(N, num_classes))
+    root_dir = "processed_data/Zxx"
+
+    dataset = RadarDataset(root_dir, window_length=int(30 / 0.0082), step=int(10 / 0.0082), num_radars=5)
+
+    # 数据集划分：80%训练, 10%验证, 10%测试
+    total_samples = len(dataset)
+    indices = np.arange(total_samples)
+    np.random.shuffle(indices)
+    train_size = int(0.8 * total_samples)
+    val_size = int(0.1 * total_samples)
+    test_size = total_samples - train_size - val_size
     
-    # 创建数据模块
-    data_module = RadarDataModule(train_data, train_labels, train_data, train_labels, train_data, train_labels)
+    train_dataset = Subset(dataset, indices[:train_size])
+    val_dataset = Subset(dataset, indices[train_size:train_size+val_size])
+    test_dataset = Subset(dataset, indices[train_size+val_size:])
     
-    # 测试数据加载器
-    train_loader = data_module.train_loader()
-    for batch in train_loader:
-        inputs, targets = batch
-        print(f"inputs size: {inputs.size()} targets size: {targets.size()}")
-        break
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=True)
+
+    model = SingleWindowRadarGNN()
     
-    # 初始化模型
-    model = SingleWindowRadarGNN( num_classes=num_classes)
-    
-    # 训练模型
     train_loss_history, val_metrics_history, best_model = train_model(
-        model, train_loader, train_loader, num_epochs=10, device="cpu"
+        model, train_loader, val_loader, num_epochs=10, lr=0.001, device="cuda", save_path="best_model.pth"
     )
     print("训练完成")

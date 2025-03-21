@@ -11,7 +11,7 @@ from .graph_builder import StaticGraphBuilder
 class SingleWindowRadarGNN(nn.Module):
     def __init__(self, 
                  num_classes=10,
-                 time_steps=30, 
+                 time_steps=int(30/0.0082), 
                  doppler_bins=128,
                  radar_coords=None,
                  radar_feature_dim=64,

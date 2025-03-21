@@ -3,8 +3,9 @@ import glob
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torch.utils.data import Subset
+from torch.utils.data import Dataset, DataLoader, Subset
+from sklearn.model_selection import train_test_split
+import shutil
 
 ts = 0.0082
 window_length = int(30 / ts)  # 30s
@@ -64,7 +65,7 @@ def normalize_data(data):
     return (data - min_val) / (max_val - min_val)
 
 
-class RadarDynamicDataset(Dataset):
+class RadarDataset(Dataset):
     def __init__(self, root_dir, window_length=int(30 / 0.0082), step=int(10 / 0.0082), num_radars=5):
         """
         Args:
@@ -136,24 +137,66 @@ class RadarDynamicDataset(Dataset):
         radar_sample = np.stack([w[win_idx] for w in radar_windows_list],
                                 axis=0)  # shape: [num_radars, window_length, F]
         label_sample = label_windows[win_idx]  # shape: [num_classes]
+
+        print('Check in Class-----label_sample.shape is :', label_sample.shape)
+
         return torch.tensor(radar_sample, dtype=torch.float32), torch.tensor(label_sample, dtype=torch.float32)
+
+
+def save_dataset(dataset, save_dir):
+    """
+    将处理好的数据集中的每个窗口样本分别保存到对应的文件夹中：
+    先按 80% 训练 / 10% 验证 / 10% 测试 划分，然后在每个部分中将每个窗口保存为单独的 .pt 文件。
+    """
+    # 划分数据集
+    total_samples = len(dataset)
+    indices = np.arange(total_samples)
+    np.random.shuffle(indices)
+    train_size = int(0.8 * total_samples)
+    val_size = int(0.1 * total_samples)
+    test_size = total_samples - train_size - val_size
+
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size:train_size + val_size]
+    test_indices = indices[train_size + val_size:]
+
+    splits = {
+        "train": Subset(dataset, train_indices),
+        "val": Subset(dataset, val_indices),
+        "test": Subset(dataset, test_indices)
+    }
+
+    for split, subset in splits.items():
+        split_dir = os.path.join(save_dir, split)
+        os.makedirs(split_dir, exist_ok=True)
+        count = 0
+        for i in range(len(subset)):
+            # 这里每个样本返回的是： radar_data: [num_radars, window_length, F] 和
+            # labels: [num_classes]
+            sample, label = subset[i]
+
+            print('Check in Saving------labels.shape is :', label.shape)
+
+            file_path = os.path.join(split_dir, f"{count}.pt")
+            torch.save({"sample": torch.tensor(sample, dtype=torch.float32),
+                        "label": torch.tensor(label, dtype=torch.float32)},
+                       file_path)
+            count += 1
+            print(f"Processing {split} dataset---------- num {i + 1}/{len(subset)}")
+
+        print(f"{split} dataset: 保存了 {count} 个窗口样本到 {split_dir}")
 
 
 if __name__ == "__main__":
     root_dir = "processed_data/Zxx"
-    dataset = RadarDynamicDataset(root_dir, window_length=window_length, step=step)
+    output_dir = "processed_data/Datasets"
 
-    print(f"Dataset length (total windows): {len(dataset)}")
-    sample_data, sample_label = dataset[0]
-    print("Sample data shape:", sample_data.shape)  # 期望: [num_radars, window_length, F]     [5, 3658, 128]
-    print("Sample label shape:", sample_label.shape)  # 期望: [num_classes]    [10]
+    dataset = RadarDataset(root_dir)
+    save_dataset(dataset, output_dir)
 
-    # 创建 DataLoader
-    loader = DataLoader(dataset, batch_size=4, shuffle=True)
-    for radar_batch, label_batch in loader:
-        # radar_batch: [B, num_radars, window_length, F]
-        # label_batch: [B, num_classes]
-        print("Batch radar shape:", radar_batch.shape)  # Batch radar shape: torch.Size([4, 5, 3658, 128])
-        print("Batch label shape:", label_batch.shape)  # Batch label shape: torch.Size([4, 10])
-        break
+    """
+    Sample data shape:     [num_radars, window_length, F]     [5, 3658, 128]
+    Sample label shape:    [num_classes]    [10]
+    """
+
 

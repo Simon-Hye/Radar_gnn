@@ -9,6 +9,13 @@ from torch.utils.tensorboard import SummaryWriter
 from model.radar_gnn import SingleWindowRadarGNN
 from loading_data import Wins_Dataset
 
+
+device='cuda'
+weights = torch.tensor([2201, 1263, 843, 429, 428, 452, 423, 422, 854, 431], dtype=torch.float32)
+weights = weights.sum() / weights
+weights = (weights / weights.max()).to(device)
+
+
 def train_model(
         model,
         train_loader: DataLoader,
@@ -165,6 +172,6 @@ if __name__ == "__main__":
     model = SingleWindowRadarGNN()
 
     train_loss_history, val_metrics_history, best_model = train_model(
-        model, train_loader, valid_loader, num_epochs=10, lr=0.001, device="cuda", save_path="best_model.pth"
+        model, train_loader, valid_loader, num_epochs=20, lr=0.001, device="cuda", save_path="best_model.pth"
     )
     print("训练完成")

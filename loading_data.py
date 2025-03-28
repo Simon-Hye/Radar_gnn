@@ -21,6 +21,9 @@ class Wins_Dataset(Dataset):
         data_dict = torch.load(self.files[idx],weights_only=False)
         sample = data_dict['sample']  # radar 数据，例如 shape: [num_radars, window_length, F]
         label = data_dict['label']    # 标签，例如 shape: [num_classes]
+
+        label[0]=0  #忽略空类
+
         return sample, label
 
 if __name__ == "__main__":

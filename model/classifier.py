@@ -1,5 +1,4 @@
 
-import torch
 import torch.nn as nn
 
 class RadarClassifier(nn.Module):
@@ -18,7 +17,6 @@ class RadarClassifier(nn.Module):
             nn.ReLU(),
             nn.Dropout(lamda),
             nn.Linear(hidden_features, num_classes),
-            nn.Sigmoid()
         )
     
     def forward(self, x):

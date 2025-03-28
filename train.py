@@ -4,16 +4,33 @@ import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
-
+from torch.nn import functional as F
 
 from model.radar_gnn import SingleWindowRadarGNN
 from loading_data import Wins_Dataset
 
+device = 'cuda'
+Batch_size = 8
+nums = torch.tensor([2201, 1263, 843, 429, 428, 452, 423, 422, 854, 431], dtype=torch.float32)
+total_samples = 3211
+weights = ((total_samples - nums) / nums).to(device)
+weights = weights / weights.sum()
 
-device='cuda'
-weights = torch.tensor([2201, 1263, 843, 429, 428, 452, 423, 422, 854, 431], dtype=torch.float32)
-weights = weights.sum() / weights
-weights = (weights / weights.max()).to(device)
+
+class FocalLoss(nn.Module):
+    def __init__(self, class_counts, gamma=2.0, beta=0.999):
+        super().__init__()
+        self.gamma = gamma
+        # 计算有效样本数
+        effective_num = 1.0 - np.power(beta, class_counts)
+        self.class_weights = (1.0 - beta) / np.array(effective_num)
+        self.class_weights = torch.tensor(self.class_weights / self.class_weights.sum() * len(class_counts))
+
+    def forward(self, preds, targets):
+        bce_loss = F.binary_cross_entropy_with_logits(preds, targets, reduction='none')
+        pt = torch.exp(-bce_loss)
+        focal_loss = self.class_weights.to(preds.device) * (1 - pt) ** self.gamma * bce_loss
+        return focal_loss.mean()
 
 
 def train_model(
@@ -42,7 +59,7 @@ def train_model(
     """
     # 初始化配置
     model = model.to(device)
-    criterion = nn.BCELoss()  # 配合最后的Sigmoid
+    criterion = FocalLoss(nums,gamma=2.0)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
 
@@ -65,6 +82,9 @@ def train_model(
             targets = targets.float().to(device)  # [B, num_classes]
 
             outputs = model(inputs)  # [B, num_classes]
+
+            # print(f'\npredicted label:{outputs},\ntrue label:{targets}')
+
             loss = criterion(outputs, targets)
 
             optimizer.zero_grad()
@@ -85,9 +105,9 @@ def train_model(
         val_metrics = evaluate_model(model, val_loader, device)
         val_metrics_history.append(val_metrics)
         writer.add_scalar("Loss/Val", val_metrics['loss'], epoch)
-        writer.add_scalar("Metrics/F1", val_metrics['f1'], epoch)
-        writer.add_scalar("Metrics/AUC", val_metrics['auc'], epoch)
-        writer.add_scalar("Metrics/Accuracy", val_metrics['accuracy'], epoch)
+        writer.add_scalar("F1", val_metrics['f1'], epoch)
+        writer.add_scalar("AUC", val_metrics['auc'], epoch)
+        writer.add_scalar("Accuracy", val_metrics['accuracy'], epoch)
         writer.add_scalar("LearningRate", optimizer.param_groups[0]['lr'], epoch)
 
         # 学习率调度
@@ -118,7 +138,7 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
         Dict: 包含loss, f1, auc等指标
     """
     model.eval()
-    criterion = nn.BCELoss()
+    criterion = FocalLoss(nums,gamma=2.0)
 
     all_preds = []
     all_targets = []
@@ -131,6 +151,7 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
             targets = targets.float().to(device)
 
             outputs = model(inputs)
+
             loss = criterion(outputs, targets)
 
             # 转换为numpy数组
@@ -142,8 +163,12 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
             total_loss += loss.item() * inputs.size(0)
 
     # 合并所有批次的预测结果
-    all_preds = np.concatenate(all_preds)
+    all_preds = torch.sigmoid(torch.tensor(np.concatenate(all_preds))).cpu().numpy()
     all_targets = np.concatenate(all_targets)
+
+    # 【zyb】在这里添加代码打印并保存all_preds和all_targets
+    print(
+        f'\npredicted label:{np.round(all_preds[0:3, :], decimals=2)},\ntrue label:{np.round(all_targets[0:3, :], decimals=2)}')
 
     # 计算指标
     avg_loss = total_loss / len(data_loader.dataset)
@@ -159,15 +184,14 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
 
 
 if __name__ == "__main__":
-
     train_folder = "processed_data/Datasets/train"
     valid_folder = "processed_data/Datasets/val"
 
     train_dataset = Wins_Dataset(train_folder)
     valid_dataset = Wins_Dataset(valid_folder)
 
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=Batch_size, shuffle=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=Batch_size, shuffle=False)
 
     model = SingleWindowRadarGNN()
 

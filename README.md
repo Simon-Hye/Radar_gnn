@@ -28,3 +28,10 @@ pip install torch-scatter torch-sparse torch-cluster torch-spline-conv -f https:
 pip install torch-geometric
 pip install scikit-learn
 pip intall matplotlib
+
+- 改进后的CNN（更深，权重共享）
+  - Test Loss: 0.0603 | F1: 0.6778 | AUC: 0.9259 | Hamming accuaracy:0.8216 | Accuracy: 0.2861
+
+- 改进的classifier（标签关系建模）：
+  - hidden_layer=256 效果很差 改为128之后效果明显
+  - Test Loss: 0.0575 | F1: 0.7033 | AUC: 0.9344 | Hamming accuaracy:0.8520 | Total Accuracy: 0.3657

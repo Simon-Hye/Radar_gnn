@@ -1,20 +1,28 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
-from torch.utils.data import DataLoader, Subset
+from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, hamming_loss
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn import functional as F
-
 from model.radar_gnn import SingleWindowRadarGNN
 from loading_data import Wins_Dataset
 
 device = 'cuda'
-Batch_size = 8
+Batch_size = 16
 nums = torch.tensor([2201, 1263, 843, 429, 428, 452, 423, 422, 854, 431], dtype=torch.float32)
 total_samples = 3211
 weights = ((total_samples - nums) / nums).to(device)
 weights = weights / weights.sum()
+
+
+thresholds_class=[0.6114004, 0.45961863, 0.42660123, 0.36656177, 0.39477304,
+                  0.36897817, 0.33716515, 0.40618655, 0.4518095, 0.3600167]
+
+
+def predict(probs, thresholds):
+    # probs: [N, num_classes], thresholds: [num_classes]
+    return (probs >= thresholds).astype(int)
 
 
 class FocalLoss(nn.Module):
@@ -102,12 +110,13 @@ def train_model(
         writer.add_scalar("Loss/Train_Epoch", avg_train_loss, epoch)
 
         # ================= 验证阶段 =================
-        val_metrics = evaluate_model(model, val_loader, device)
+        val_metrics, pred, target = evaluate_model(model, val_loader, device)
         val_metrics_history.append(val_metrics)
         writer.add_scalar("Loss/Val", val_metrics['loss'], epoch)
         writer.add_scalar("F1", val_metrics['f1'], epoch)
         writer.add_scalar("AUC", val_metrics['auc'], epoch)
         writer.add_scalar("Accuracy", val_metrics['accuracy'], epoch)
+        writer.add_scalar('Hamming accuracy', val_metrics['hamming_accuracy'],epoch)
         writer.add_scalar("LearningRate", optimizer.param_groups[0]['lr'], epoch)
 
         # 学习率调度
@@ -120,7 +129,8 @@ def train_model(
 
         print(f"Epoch {epoch + 1}/{num_epochs} | Train Loss: {avg_train_loss:.4f} | "
               f"Val Loss: {val_metrics['loss']:.4f} | F1: {val_metrics['f1']:.4f} | "
-              f"AUC: {val_metrics['auc']:.4f} | Accuracy: {val_metrics['accuracy']:.4f}")
+              f"AUC: {val_metrics['auc']:.4f} | Hamming accuaracy:{val_metrics['hamming_accuracy']:.4f} |"
+              f" Accuracy: {val_metrics['accuracy']:.4f}")
 
     writer.close()
 
@@ -167,20 +177,21 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
     all_targets = np.concatenate(all_targets)
 
     # 【zyb】在这里添加代码打印并保存all_preds和all_targets
-    print(
-        f'\npredicted label:{np.round(all_preds[0:3, :], decimals=2)},\ntrue label:{np.round(all_targets[0:3, :], decimals=2)}')
+    #print(f'\npredicted label:{np.round(all_preds[0:3, :], decimals=2)},\ntrue label:{np.round(all_targets[0:3, :], decimals=2)}')
 
     # 计算指标
     avg_loss = total_loss / len(data_loader.dataset)
-    pred_labels = (all_preds > 0.5).astype(int)  # 阈值设为0.5
+    pred_labels = predict(all_preds, thresholds_class)
 
     metrics = {
         'loss': avg_loss,
         'f1': f1_score(all_targets, pred_labels, average='macro'),
         'auc': roc_auc_score(all_targets, all_preds, average='macro'),
-        'accuracy': accuracy_score(all_targets, pred_labels)
+        'accuracy': accuracy_score(all_targets, pred_labels),
+        'hamming_accuracy': 1 - hamming_loss(all_targets, pred_labels)
+
     }
-    return metrics
+    return metrics,pred_labels,all_targets
 
 
 if __name__ == "__main__":
@@ -196,6 +207,6 @@ if __name__ == "__main__":
     model = SingleWindowRadarGNN()
 
     train_loss_history, val_metrics_history, best_model = train_model(
-        model, train_loader, valid_loader, num_epochs=20, lr=0.001, device="cuda", save_path="best_model.pth"
+        model, train_loader, valid_loader, num_epochs=50, lr=0.001, device="cuda", save_path="best_model.pth"
     )
     print("训练完成")

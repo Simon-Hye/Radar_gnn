@@ -88,7 +88,7 @@ class RadarDataset(Dataset):
             imag_path = os.path.join(radar_folder, "Zxx_imag.csv")
             real_part = load_csv_file(real_path)
             imag_part = load_csv_file(imag_path)
-            Zxx= real_part + 1j * imag_part
+            Zxx = real_part + 1j * imag_part
             # Zxx.shape = [F, T_total]
             F, T_total = Zxx.shape
             N_windows = (T_total - window_length) // step + 1
@@ -116,13 +116,12 @@ class RadarDataset(Dataset):
             imag_path = os.path.join(radar_folder, "Zxx_imag.csv")
             real_part = load_csv_file(real_path)
             imag_part = load_csv_file(imag_path)
-            Zxx= real_part + 1j * imag_part
-
+            Zxx = real_part + 1j * imag_part
 
             Zxx_swapped = np.concatenate((Zxx[64:-1], Zxx[0:63]), axis=0)
             Zxx_magnitude = np.abs(Zxx_swapped)
             Zxx_db = 20 * np.log10(Zxx_magnitude + 1e-10)  # 避免 log(0) 错误
-            vmin = np.percentile(Zxx_db, 5)   # 计算 5% 分位数
+            vmin = np.percentile(Zxx_db, 5)  # 计算 5% 分位数
             vmax = np.percentile(Zxx_db, 95)  # 计算 95% 分位数
             Zxx_processed = np.clip(Zxx_db, vmin, vmax)  # 限制范围
             Zxx_processed = normalize_data(Zxx_processed)  # 归一化
@@ -181,10 +180,8 @@ def save_dataset(dataset, save_dir):
             # labels: [num_classes]
             sample, label = subset[i]
 
-
             file_path = os.path.join(split_dir, f"{count}.pt")
-            
-            
+
             torch.save({"sample": torch.tensor(sample, dtype=torch.float32),
                         "label": torch.tensor(label, dtype=torch.float32)},
                        file_path)
@@ -202,7 +199,7 @@ if __name__ == "__main__":
     save_dataset(dataset, output_dir)
 
     """
-    Sample data shape:     [num_radars, window_length, F]     [5, 3658, 128]
+    Sample data shape:     [num_radars, window_length, F]     [5, 3658, 126]
     Sample label shape:    [num_classes]    [10]
     """
 

@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch
 import torch.nn as nn
 
+
 class CNNFeatureExtractor(nn.Module):
     def __init__(self, input_channels=1, output_dim=256):
         """
@@ -31,7 +32,7 @@ class CNNFeatureExtractor(nn.Module):
         x = x.view(x.size(0), -1)  # 展平
         x = self.fc(x)  # [B, output_dim]
         return x
-    
+
 
 class RadarFeatureExtractor(nn.Module):
     def __init__(self, input_channels=1, cnn_out_dim=256):
@@ -48,7 +49,6 @@ class RadarFeatureExtractor(nn.Module):
 
 
 if __name__ == '__main__':
-
     model = RadarFeatureExtractor()
 
     # 生成随机输入 [B, 1, T, F]，
@@ -60,4 +60,3 @@ if __name__ == '__main__':
 
     # 输出形状
     print("Output shape:", output.shape)  # 预期输出: [8, 5, 256], 8个样本，每个样本5个雷达，每个雷达256维特征
-    

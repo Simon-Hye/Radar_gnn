@@ -22,8 +22,6 @@ class Wins_Dataset(Dataset):
         sample = data_dict['sample']  # radar 数据，例如 shape: [num_radars, window_length, F]
         label = data_dict['label']    # 标签，例如 shape: [num_classes]
 
-        label[0]=0  #忽略空类
-
         return sample, label
 
 if __name__ == "__main__":
@@ -44,7 +42,7 @@ if __name__ == "__main__":
 
     # 检查一个 batch 的数据形状
     for samples, labels in train_loader:
-        print("Train batch sample shape:", samples.shape)  # torch.Size([4, 5, 3658, 128])
+        print("Train batch sample shape:", samples.shape)  # torch.Size([4, 5, 3658, 126])
         print("Train batch label shape:", labels.shape)      # torch.Size([4, 10])
         break
 

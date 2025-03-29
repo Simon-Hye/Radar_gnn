@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.nn import GATv2Conv
 
 class RadarGATAggregator(nn.Module):
-    def __init__(self, in_channels=256, out_channels=512, heads=2, edge_dim=1):
+    def __init__(self, in_channels=64, out_channels=128, heads=2, edge_dim=1):
         """
         利用 GATv2Conv 层聚合来自多个雷达的特征
         Args:
@@ -11,7 +11,6 @@ class RadarGATAggregator(nn.Module):
             out_channels (int): 每个注意力头的输出维度
             heads (int): 注意力头数量
             edge_dim (int): 边属性维度
-            out_channels = out_channels * heads
         """
         super().__init__()
         self.gat = GATv2Conv(in_channels, out_channels, heads=heads, edge_dim=edge_dim, concat=True)
@@ -51,10 +50,10 @@ class RadarGATAggregator(nn.Module):
         return out
     
 if(__name__ == '__main__'):
-    B = 8  # batch size
+    B = 4  # batch size
     num_nodes = 5  # 每个样本的雷达数量
-    in_channels = 256  # 输入特征维度
-    out_channels = 512  # GAT输出维度
+    in_channels = 64  # 输入特征维度
+    out_channels = 128  # GAT输出维度
     heads = 2  # 注意力头数
     edge_dim = 1  # 边属性维度
     num_edges = 6  # 图中的边数
@@ -76,8 +75,8 @@ if(__name__ == '__main__'):
     expected_offsets = torch.tensor([0, num_nodes, 2 * num_nodes, 3 * num_nodes]).view(-1, 1)
 
     # 断言检查
-    # assert torch.equal(model.offsets, expected_offsets), f"Expected {expected_offsets}, but got {model.offsets}"
-    # print("recompute_offsets 计算正确")
+    assert torch.equal(model.offsets, expected_offsets), f"Expected {expected_offsets}, but got {model.offsets}"
+    print("recompute_offsets 计算正确")
 
     # 前向传播
     output = model(node_feats, edge_index, edge_attr)

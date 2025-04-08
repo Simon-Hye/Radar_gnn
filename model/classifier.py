@@ -38,7 +38,7 @@ class LabelRelationEncoder(nn.Module):
         super().__init__()
         self.num_classes = num_classes
 
-        # 标签关系编码器，适配 CNN 输出的 feature_dim
+        # 标签关系编码器，适配 GNN 输出的 feature_dim
         self.relation_encoder = nn.Sequential(
             nn.Linear(feature_dim, relation_dim),
             nn.ReLU(),

@@ -35,3 +35,9 @@ pip intall matplotlib
 - 改进的classifier（标签关系建模）：
   - hidden_layer=256 效果很差 改为128之后效果明显
   - Test Loss: 0.0575 | F1: 0.7033 | AUC: 0.9344 | Hamming accuaracy:0.8520 | Total Accuracy: 0.3657
+
+
+- 新增学习率调度ReduceLROnPlateau（patience=10） 
+- LOPO在新数据集Datasets_LOPO上进行，Datasets_LOPO的test集为Fr2经过处理的所有样本，其余人的数据经过处理后随机抽取百分之八十为训练集，百分之二十为训练集
+  - Test Loss: 0.0463 | F1: 0.7621 | AUC: 0.9656 | Hamming accuaracy:0.8922 | Accuracy: 0.4925
+  - CM_LOPO生成在.\figures 文件夹下

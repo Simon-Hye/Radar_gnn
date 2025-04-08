@@ -12,7 +12,7 @@ from sklearn.metrics import multilabel_confusion_matrix
 from train import evaluate_model, predict
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-test_folder = "processed_data/Datasets/test"
+test_folder = "processed_data/Datasets_LOPO/test"
 test_dataset = Wins_Dataset(test_folder)
 test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 model = SingleWindowRadarGNN()

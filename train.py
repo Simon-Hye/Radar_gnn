@@ -69,7 +69,7 @@ def train_model(
     model = model.to(device)
     criterion = FocalLoss(nums,gamma=2.0)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10)
 
     best_val_loss = float('inf')
     train_loss_history = []
@@ -195,8 +195,8 @@ def evaluate_model(model, data_loader: DataLoader, device: str = "cuda"):
 
 
 if __name__ == "__main__":
-    train_folder = "processed_data/Datasets/train"
-    valid_folder = "processed_data/Datasets/val"
+    train_folder = "processed_data/Datasets_LOPO/train"
+    valid_folder = "processed_data/Datasets_LOPO/val"
 
     train_dataset = Wins_Dataset(train_folder)
     valid_dataset = Wins_Dataset(valid_folder)

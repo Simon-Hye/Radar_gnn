@@ -29,6 +29,9 @@ pip install torch-geometric
 pip install scikit-learn
 pip intall matplotlib
 
+
+- best_model_v2 is literally the best one.
+
 - 改进后的CNN（更深，权重共享）
   - Test Loss: 0.0603 | F1: 0.6778 | AUC: 0.9259 | Hamming accuaracy:0.8216 | Accuracy: 0.2861
 
@@ -38,6 +41,8 @@ pip intall matplotlib
 
 
 - 新增学习率调度ReduceLROnPlateau（patience=10） 
-- LOPO在新数据集Datasets_LOPO上进行，Datasets_LOPO的test集为Fr2经过处理的所有样本，其余人的数据经过处理后随机抽取百分之八十为训练集，百分之二十为训练集
+- LOPO在新数据集Datasets_LOPO上进行，Datasets_LOPO的test集为Fr2经过处理的所有样本，其余人的数据经过处理后随机抽取百分之八十为训练集，百分之二十为训练集(v2 and the newer versions are all employed in Datasets_LOPO)
   - Test Loss: 0.0463 | F1: 0.7621 | AUC: 0.9656 | Hamming accuaracy:0.8922 | Accuracy: 0.4925
   - CM_LOPO生成在.\figures 文件夹下
+  - 消融实验：去除GAT组件，改为简单拼接5个CNN产生的特征向量，其余不变
+    - Test Loss: 0.0533 | F1: 0.7341 | AUC: 0.9477 | Hamming accuaracy:0.8799 | Accuracy: 0.4478

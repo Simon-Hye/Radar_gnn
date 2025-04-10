@@ -31,7 +31,7 @@ pip intall matplotlib
 
 
 - best_model_v2 is literally the best one.
-
+- 对于Label3-6区分效果较差的可能原因：spectrograms are incapable of directly discriminating between translational movements such as walking and in-place movements such as falls.
 - 改进后的CNN（更深，权重共享）
   - Test Loss: 0.0603 | F1: 0.6778 | AUC: 0.9259 | Hamming accuaracy:0.8216 | Accuracy: 0.2861
 

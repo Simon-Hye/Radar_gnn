@@ -31,7 +31,8 @@ pip intall matplotlib
 
 
 - best_model_v2 is literally the best one.
-
+- 关于tensorboard存档的说明：./runs 下experience为LOPO训练过程，experience_v1为在原数据集上的多次训练过程，v2为对GAT的消融实验
+- 对于Label3-6区分效果较差的可能原因：spectrograms are incapable of directly discriminating between translational movements such as walking and in-place movements such as falls.
 - 改进后的CNN（更深，权重共享）
   - Test Loss: 0.0603 | F1: 0.6778 | AUC: 0.9259 | Hamming accuaracy:0.8216 | Accuracy: 0.2861
 
@@ -46,5 +47,3 @@ pip intall matplotlib
   - CM_LOPO生成在.\figures 文件夹下
   - 消融实验：去除GAT组件，改为简单拼接5个CNN产生的特征向量，其余不变
     - Test Loss: 0.0533 | F1: 0.7341 | AUC: 0.9477 | Hamming accuaracy:0.8799 | Accuracy: 0.4478
-  - 消融实验：去除LabelRelation Encoder
-    - Test Loss: 0.0543 | F1: 0.7209 | AUC: 0.9542 | Hamming accuaracy:0.8709 | Accuracy: 0.4851

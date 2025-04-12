@@ -46,3 +46,5 @@ pip intall matplotlib
   - CM_LOPO生成在.\figures 文件夹下
   - 消融实验：去除GAT组件，改为简单拼接5个CNN产生的特征向量，其余不变
     - Test Loss: 0.0533 | F1: 0.7341 | AUC: 0.9477 | Hamming accuaracy:0.8799 | Accuracy: 0.4478
+  - 消融实验：去除LabelRelation Encoder
+    - Test Loss: 0.0543 | F1: 0.7209 | AUC: 0.9542 | Hamming accuaracy:0.8709 | Accuracy: 0.4851
